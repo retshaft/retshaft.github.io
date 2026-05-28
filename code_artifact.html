@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>가상 공간 전시 디자인 기획서 - Solaris Archive</title>
+    <!-- 폰트 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- 아이콘 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ww-cream': '#f3ece3',
+                        'ww-gold': '#d1b253',
+                        'ww-lgray': '#9a9b9a',
+                        'ww-dslate': '#4a5252',
+                        'ww-black': '#131313',
+                    },
+                    fontFamily: {
+                        'sans': ['"Noto Sans KR"', 'sans-serif'],
+                        'orbitron': ['"Orbitron"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 뷰포트 및 스케일링 설정 */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0a0a0a;
+            overflow: hidden;
+            font-family: 'Noto Sans KR', sans-serif;
+            color: #f3ece3;
+        }
+
+        #scale-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: center center;
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+            background-color: #131313;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* 풀페이지 스크롤 컨테이너 */
+        #scroll-container {
+            width: 100%;
+            height: 100%;
+            transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+            will-change: transform;
+        }
+
+        /* 개별 슬라이드 섹션 (정확히 1920x1080) */
+        section {
+            width: 1920px;
+            height: 1080px;
+            padding: 100px 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        /* UI 컴포넌트 */
+        .deco-line {
+            width: 6px;
+            height: 180px;
+            background-color: #d1b253;
+            margin-right: 2.5rem;
+        }
+
+        .glass-panel {
+            background: rgba(74, 82, 82, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(154, 155, 154, 0.2);
+            border-left: 6px solid #d1b253;
+            padding: 3rem;
+        }
+
+        /* 아코디언 (텍스트 줄바꿈 이슈 해결) */
+        .accordion-container {
+            display: flex;
+            width: 100%;
+            height: 600px;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .accordion-item {
+            flex: 1;
+            background: rgba(19, 19, 19, 0.8);
+            border: 1px solid rgba(154, 155, 154, 0.3);
+            border-radius: 8px;
+            transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden; /* 내부 요소가 넘치지 않도록 차단 */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 2rem;
+        }
+
+        .accordion-item:hover {
+            flex: 4.5; /* 호버 시 공간을 더 넓게 확보 */
+            border-color: #d1b253;
+            background: rgba(74, 82, 82, 0.4);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+        }
+
+        .acc-icon {
+            font-size: 3rem;
+            color: #d1b253;
+            opacity: 0.5;
+            margin-bottom: 1rem;
+            transition: opacity 0.3s;
+        }
+
+        .accordion-item:hover .acc-icon { opacity: 1; }
+
+        .acc-title {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #f3ece3;
+            white-space: nowrap;
+        }
+
+        .acc-content {
+            opacity: 0;
+            max-height: 0;
+            transition: opacity 0.3s ease, max-height 0.4s ease;
+            transform: translateY(20px);
+        }
+
+        .accordion-item:hover .acc-content {
+            opacity: 1;
+            max-height: 400px;
+            margin-top: 2rem;
+            transform: translateY(0);
+            transition-delay: 0.15s; /* 너비가 확보된 후 페이드인 되도록 딜레이 */
+        }
+
+        .acc-content ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            min-width: 600px; /* 고정 너비 부여로 리사이징 도중 줄바꿈 현상 방지 */
+        }
+
+        .acc-content li {
+            font-size: 1.15rem;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            color: #f3ece3;
+        }
+
+        .acc-content li i {
+            color: #d1b253;
+            margin-top: 5px;
+            width: 24px;
+        }
+
+        /* 네비게이션 인디케이터 */
+        .nav-indicator {
+            position: absolute;
+            right: 60px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            z-index: 100;
+        }
+
+        .nav-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: #4a5252;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-dot.active {
+            background-color: #d1b253;
+            transform: scale(1.5);
+        }
+
+        .nav-dot span {
+            position: absolute;
+            right: 35px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #d1b253;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .nav-dot.active span { opacity: 1; }
+
+        /* CSS 맵 구조도 디자인 */
+        .css-map-container {
+            position: relative;
+            background: linear-gradient(135deg, #131313 0%, #1a1c1c 100%);
+            overflow: hidden;
+            border-radius: 8px;
+        }
+        .map-grid-bg {
+            position: absolute; inset: 0; opacity: 0.1;
+            background-image: radial-gradient(#d1b253 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        .map-radar-circle {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            border: 1px dashed rgba(209, 178, 83, 0.2); border-radius: 50%;
+        }
+        .map-hub {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 120px; height: 120px; border-radius: 50%;
+            background: #131313; border: 3px solid #d1b253;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-family: 'Orbitron'; font-weight: bold; color: #d1b253; z-index: 20;
+            box-shadow: 0 0 40px rgba(209, 178, 83, 0.3);
+        }
+        .map-wing {
+            position: absolute; width: 160px; height: 70px;
+            background: rgba(74, 82, 82, 0.7); border: 1px solid rgba(154, 155, 154, 0.5);
+            border-left: 4px solid #d1b253;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #f3ece3; z-index: 20; border-radius: 4px;
+            transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .map-wing:hover { border-color: #d1b253; background: rgba(209, 178, 83, 0.2); scale: 1.05; }
+        .map-line {
+            position: absolute; top: 50%; left: 50%; height: 2px;
+            background: rgba(209, 178, 83, 0.3); transform-origin: left center; z-index: 10;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="scale-wrapper">
+        <!-- 네비게이션 (6개 섹션으로 변경) -->
+        <div class="nav-indicator">
+            <div class="nav-dot active" onclick="goToSlide(0)"><span>01</span></div>
+            <div class="nav-dot" onclick="goToSlide(1)"><span>02</span></div>
+            <div class="nav-dot" onclick="goToSlide(2)"><span>03</span></div>
+            <div class="nav-dot" onclick="goToSlide(3)"><span>04</span></div>
+            <div class="nav-dot" onclick="goToSlide(4)"><span>05</span></div>
+            <div class="nav-dot" onclick="goToSlide(5)"><span>06</span></div>
+        </div>
+
+        <div id="scroll-container">
+            
+            <!-- 01. 프로젝트 개요 -->
+            <section class="bg-ww-black">
+                <div class="absolute top-20 right-20 opacity-5 pointer-events-none">
+                    <i class="fa-solid fa-cube text-ww-lgray" style="font-size: 40rem;"></i>
+                </div>
+                
+                <div class="flex items-center mb-24 z-10">
+                    <div class="deco-line"></div>
+                    <div>
+                        <p class="font-orbitron tracking-widest text-ww-gold mb-4 text-2xl uppercase">Virtual Space Exhibition Design</p>
+                        <h1 class="text-8xl font-bold font-sans tracking-tight leading-tight">가상 공간 전시 디자인<br>구현 기획서</h1>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-16 z-10 w-full pr-32">
+                    <div class="glass-panel">
+                        <div class="mb-10 text-3xl">
+                            <p class="text-ww-lgray mb-4"><span class="font-bold text-ww-cream inline-block w-40">프로젝트명</span> 2024001834_황동윤</p>
+                            <p class="text-ww-lgray"><span class="font-bold text-ww-cream inline-block w-40">전시 주제</span> Solaris Archive (명조: 워더링 웨이브)</p>
+                        </div>
+                        
+                        <h3 class="text-2xl font-bold text-ww-gold mb-4 font-orbitron uppercase">Purpose</h3>
+                        <p class="text-ww-cream leading-relaxed text-2xl">
+                            Unity URP 환경에서 툰 셰이더와 커스텀 VFX 기술을 구현하고, 리소스 최적화를 통해 WebGL 플랫폼에서 안정적으로 구동되는 고품질 캐릭터 아카이브 전시 공간 구축.
+                        </p>
+                    </div>
+                    
+                    <div class="flex flex-col justify-center gap-10">
+                        <div class="glass-panel">
+                            <h3 class="text-xl font-bold text-ww-lgray mb-4 uppercase tracking-wider">Target Platform</h3>
+                            <p class="text-4xl font-bold text-ww-cream">PC WebGL 기기 타겟팅</p>
+                        </div>
+                        <div class="glass-panel">
+                            <h3 class="text-xl font-bold text-ww-lgray mb-6 uppercase tracking-wider">Core Tech Stack</h3>
+                            <ul class="text-ww-cream text-3xl space-y-5">
+                                <li><i class="fa-brands fa-unity text-ww-gold w-12"></i> Unity 6.3 LTS 이상</li>
+                                <li><i class="fa-solid fa-layer-group text-ww-gold w-12"></i> URP (Universal Render Pipeline)</li>
+                                <li><i class="fa-solid fa-project-diagram text-ww-gold w-12"></i> Shader Graph</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 02. 전시 공간 구조 -->
+            <section class="bg-[#111111] border-t border-ww-dslate/30">
+                <h2 class="text-7xl font-bold mb-16 flex items-center gap-6">
+                    <span class="text-ww-gold font-orbitron text-7xl opacity-40">02</span> 전시 공간 구조
+                </h2>
+                
+                <div class="grid grid-cols-2 gap-16 pr-32 h-[600px] items-center">
+                    <div class="glass-panel h-full flex flex-col justify-center">
+                        <h3 class="text-4xl font-bold text-ww-gold mb-8 font-orbitron">Radial Layout Structure</h3>
+                        <p class="text-ww-cream text-2xl leading-relaxed mb-8">
+                            중앙의 <strong class="text-white">'센트럴 아카이브 허브(Central Hub)'</strong>를 중심으로 총 5개의 지역별 전시 윙(Wing)이 방사형으로 연결된 동선 구조입니다.
+                        </p>
+                        <ul class="text-ww-lgray text-2xl space-y-5 font-medium">
+                            <li><i class="fa-solid fa-arrow-right text-ww-gold mr-4"></i> Zone A: 황룡 (Huanglong Wing)</li>
+                            <li><i class="fa-solid fa-arrow-right text-ww-gold mr-4"></i> Zone B: 검은 해안 (Black Shores Wing)</li>
+                            <li><i class="fa-solid fa-arrow-right text-ww-gold mr-4"></i> Zone C: 리나시타 (Rinascita Wing)</li>
+                            <li><i class="fa-solid fa-arrow-right text-ww-gold mr-4"></i> Zone D: 일곱 언덕 (Seven Hills Wing)</li>
+                            <li><i class="fa-solid fa-arrow-right text-ww-gold mr-4"></i> Zone E: 라하이 로이 (Lahaie Roy Wing)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="css-map-container h-full border border-ww-dslate/50 w-full">
+                        <div class="map-grid-bg"></div>
+                        <div class="map-radar-circle w-[250px] h-[250px]"></div>
+                        <div class="map-radar-circle w-[450px] h-[450px]"></div>
+                        
+                        <!-- 중앙 허브 -->
+                        <div class="map-hub">
+                            <i class="fa-solid fa-database text-2xl mb-1"></i>
+                            <span class="text-lg">HUB</span>
+                        </div>
+
+                        <!-- 연결선 -->
+                        <div class="map-line w-[180px] -rotate-90"></div> <!-- A -->
+                        <div class="map-line w-[230px] -rotate-[15deg]"></div> <!-- B -->
+                        <div class="map-line w-[220px] rotate-[45deg]"></div> <!-- C -->
+                        <div class="map-line w-[220px] rotate-[135deg]"></div> <!-- D -->
+                        <div class="map-line w-[230px] -rotate-[165deg]"></div> <!-- E -->
+
+                        <!-- 구역(Wing) 노드 -->
+                        <div class="map-wing top-[10%] left-1/2 -translate-x-1/2">
+                            <span class="font-bold text-lg">Zone A</span><span class="text-sm text-ww-lgray mt-1">황룡</span>
+                        </div>
+                        <div class="map-wing top-[25%] right-[8%]">
+                            <span class="font-bold text-lg">Zone B</span><span class="text-sm text-ww-lgray mt-1">검은 해안</span>
+                        </div>
+                        <div class="map-wing bottom-[18%] right-[15%]">
+                            <span class="font-bold text-lg">Zone C</span><span class="text-sm text-ww-lgray mt-1">리나시타</span>
+                        </div>
+                        <div class="map-wing bottom-[18%] left-[15%]">
+                            <span class="font-bold text-lg">Zone D</span><span class="text-sm text-ww-lgray mt-1">일곱 언덕</span>
+                        </div>
+                        <div class="map-wing top-[25%] left-[8%]">
+                            <span class="font-bold text-lg">Zone E</span><span class="text-sm text-ww-lgray mt-1">라하이 로이</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 03. 전시 공간 콘셉트 -->
+            <section class="bg-ww-black border-t border-ww-dslate/30">
+                <div class="flex justify-between items-start pr-32 mb-8">
+                    <div>
+                        <h2 class="text-7xl font-bold flex items-center gap-6 mb-4">
+                            <span class="text-ww-gold font-orbitron text-7xl opacity-40">03</span> 전시 콘셉트 및 테마
+                        </h2>
+                        <p class="text-3xl text-ww-cream ml-20">
+                            <strong class="text-ww-gold">'화이트 큐브(White Cube)'</strong> 스타일 미니멀 가상 전시관.<br>
+                            <span class="text-ww-lgray text-2xl mt-2 block">구역을 호버하여 구체적 전시 테마와 배치 에셋을 확인하세요.</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="accordion-container pr-32 ml-20">
+                    <!-- Zone A -->
+                    <div class="accordion-item">
+                        <i class="fa-solid fa-sun acc-icon"></i>
+                        <h4 class="acc-title">Zone A: 황룡</h4>
+                        <div class="acc-content">
+                            <ul>
+                                <li><i class="fa-solid fa-user-ninja"></i> <div><strong>배치 에셋:</strong> 금희, 장리, 기염, 용의 별자리 등</div></li>
+                                <li><i class="fa-solid fa-palette"></i> <div><strong>분위기:</strong> 금주 성 테마의 목재/석재 인테리어 및 따뜻한 태양광 조명</div></li>
+                                <li><i class="fa-solid fa-music"></i> <div><strong>Track:</strong> 명조 공식 OST</div></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Zone B -->
+                    <div class="accordion-item">
+                        <i class="fa-solid fa-moon acc-icon"></i>
+                        <h4 class="acc-title">Zone B: 검은 해안</h4>
+                        <div class="acc-content">
+                            <ul>
+                                <li><i class="fa-solid fa-user-ninja"></i> <div><strong>배치 에셋:</strong> 파수인, 카멜리아, 돌아갈 곳이 없는 오류 등</div></li>
+                                <li><i class="fa-solid fa-palette"></i> <div><strong>분위기:</strong> 심연 테마의 디지털 글리치 패턴 및 블루/바이올렛 네온 조명</div></li>
+                                <li><i class="fa-solid fa-music"></i> <div><strong>Track:</strong> 명조 공식 OST</div></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Zone C -->
+                    <div class="accordion-item">
+                        <i class="fa-solid fa-building-columns acc-icon"></i>
+                        <h4 class="acc-title">Zone C: 리나시타</h4>
+                        <div class="acc-content">
+                            <ul>
+                                <li><i class="fa-solid fa-user-ninja"></i> <div><strong>배치 에셋:</strong> 카르티시아, 카를로타, 페비, 플뢰르 드 리스 등</div></li>
+                                <li><i class="fa-solid fa-palette"></i> <div><strong>분위기:</strong> 예술 도시 테마의 클래식 대리석 아치 구조 및 화이트 핀조명</div></li>
+                                <li><i class="fa-solid fa-music"></i> <div><strong>Track:</strong> 명조 공식 OST</div></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Zone D -->
+                    <div class="accordion-item">
+                        <i class="fa-solid fa-leaf acc-icon"></i>
+                        <h4 class="acc-title">Zone D: 일곱 언덕</h4>
+                        <div class="acc-content">
+                            <ul>
+                                <li><i class="fa-solid fa-user-ninja"></i> <div><strong>배치 에셋:</strong> 아우구스타, 유노, 거짓의 신왕 등</div></li>
+                                <li><i class="fa-solid fa-palette"></i> <div><strong>분위기:</strong> 기하학적 식생과 차분한 녹색조 자연광 연출</div></li>
+                                <li><i class="fa-solid fa-music"></i> <div><strong>Track:</strong> 명조 공식 OST</div></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Zone E -->
+                    <div class="accordion-item">
+                        <i class="fa-solid fa-flask acc-icon"></i>
+                        <h4 class="acc-title">Zone E: 라하이 로이</h4>
+                        <div class="acc-content">
+                            <ul>
+                                <li><i class="fa-solid fa-user-ninja"></i> <div><strong>배치 에셋:</strong> 에이메스, 모니에, 시그리카, 엑소스트라이더 등</div></li>
+                                <li><i class="fa-solid fa-palette"></i> <div><strong>분위기:</strong> 연구소 테마의 메탈릭 전시대 및 인공 별하늘</div></li>
+                                <li><i class="fa-solid fa-music"></i> <div><strong>Track:</strong> 명조 공식 OST</div></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 04. 전시 콘텐츠 및 에셋 스펙 -->
+            <section class="bg-[#111111] border-t border-ww-dslate/30">
+                <h2 class="text-7xl font-bold mb-16 flex items-center gap-6">
+                    <span class="text-ww-gold font-orbitron text-7xl opacity-40">04</span> 전시 콘텐츠 및 에셋 스펙
+                </h2>
+
+                <div class="grid grid-cols-2 gap-16 pr-32">
+                    <div class="space-y-12">
+                        <div class="flex gap-8 items-start bg-[#161616] p-8 rounded-lg border border-ww-dslate/50">
+                            <div class="w-20 h-20 rounded-md bg-ww-dslate/40 flex items-center justify-center shrink-0 border border-ww-gold">
+                                <i class="fa-solid fa-shapes text-4xl text-ww-gold"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-3xl font-bold text-ww-cream mb-4">시각 미디어 에셋</h3>
+                                <p class="text-ww-lgray text-xl leading-relaxed mb-4">
+                                    공식 배포된 플레이어블 공명자 및 노도/해일급 잔상의 <strong>3D 모델링(FBX)</strong>과 각 캐릭터별 <strong>공식 일러스트(2D 액자)</strong> 병행 배치.
+                                </p>
+                                <span class="inline-block px-4 py-2 bg-ww-dslate/30 text-ww-gold text-lg rounded border border-ww-gold/20">출처: 공식 모델링 플랫폼(모형지성)</span>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-8 items-start bg-[#161616] p-8 rounded-lg border border-ww-dslate/50">
+                            <div class="w-20 h-20 rounded-md bg-ww-dslate/40 flex items-center justify-center shrink-0 border border-ww-gold">
+                                <i class="fa-solid fa-music text-4xl text-ww-gold"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-3xl font-bold text-ww-cream mb-4">오디오 전시 콘텐츠 (공식 트랙)</h3>
+                                <p class="text-ww-lgray text-xl leading-relaxed">
+                                    단순 배경음을 넘어 <strong>음원 자체를 전시 콘텐츠의 일부</strong>로 취급합니다. 명조 공식 사운드트랙을 각 구역(Zone) 콘셉트에 맞춰 독립적으로 매핑 및 배치.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-12">
+                        <div class="flex gap-8 items-start bg-[#161616] p-8 rounded-lg border border-ww-dslate/50">
+                            <div class="w-20 h-20 rounded-md bg-ww-dslate/40 flex items-center justify-center shrink-0 border border-ww-gold">
+                                <i class="fa-solid fa-compress text-4xl text-ww-gold"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-3xl font-bold text-ww-cream mb-4">모델링 최적화 스펙</h3>
+                                <p class="text-ww-lgray text-xl leading-relaxed">
+                                    다수 캐릭터 수용을 위해 인게임 최고 사양 모델링의 폴리곤(Polygon) 수는 유지하되, <strong>텍스처 해상도를 최대 2K로 제한</strong>하고 아틀라스(Atlas)화를 진행합니다.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-8 items-start bg-[#161616] p-8 rounded-lg border border-ww-dslate/50">
+                            <div class="w-20 h-20 rounded-md bg-ww-dslate/40 flex items-center justify-center shrink-0 border border-ww-gold">
+                                <i class="fa-solid fa-desktop text-4xl text-ww-gold"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-3xl font-bold text-ww-cream mb-4">UI/UX 디자인</h3>
+                                <p class="text-ww-lgray text-xl leading-relaxed">
+                                    1인칭 관람 모드 전용의 미니멀 UI. 전시품 접근 시 활성화되는 캐릭터 프로필/속성 정보 팝업창 및 전체 동선 파악을 위한 미니맵 시스템 구축.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 05. 유니티 기능 및 인터랙션 -->
+            <section class="bg-ww-black border-t border-ww-dslate/30">
+                <h2 class="text-7xl font-bold mb-16 flex items-center gap-6">
+                    <span class="text-ww-gold font-orbitron text-7xl opacity-40">05</span> 유니티 기능 및 인터랙션
+                </h2>
+
+                <div class="grid grid-cols-2 gap-16 pr-32">
+                    <div class="flex flex-col gap-10">
+                        <h3 class="text-4xl font-bold text-ww-gold border-b-2 border-ww-dslate pb-4 font-orbitron tracking-widest">CUSTOM ASSETS</h3>
+                        
+                        <div class="glass-panel p-8">
+                            <h4 class="text-2xl font-bold text-white mb-4 flex items-center gap-4">
+                                <i class="fa-solid fa-palette text-ww-gold text-3xl"></i> 툰 셰이더 (Toon Shader) 구현
+                            </h4>
+                            <p class="text-ww-cream text-xl leading-relaxed">
+                                NdotL 기반 Step 기능을 활용한 하드 섀도우(2段 음영) 표현 및 Fresnel 림 라이트(Rim Light) 적용. 역법선 압출(Backface Culling) 연산으로 명조풍의 선명한 외곽선(Outline) 제어.
+                            </p>
+                        </div>
+                        
+                        <div class="glass-panel p-8">
+                            <h4 class="text-2xl font-bold text-white mb-4 flex items-center gap-4">
+                                <i class="fa-solid fa-wand-magic-sparkles text-ww-gold text-3xl"></i> 공명 스캔 웨이브 (Resonance Scan)
+                            </h4>
+                            <p class="text-ww-cream text-xl leading-relaxed">
+                                전시 스탠드 일정 반경 접근 시 발동. 바닥면에서 원형으로 퍼져나가는 푸른색 데이터 레이더 파동을 통해 상호작용 가능 상태를 직관적으로 시각화.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-10">
+                        <h3 class="text-4xl font-bold text-ww-gold border-b-2 border-ww-dslate pb-4 font-orbitron tracking-widest">SYSTEM INTEGRATION</h3>
+                        
+                        <div class="flex flex-col gap-12 mt-4">
+                            <div>
+                                <h4 class="text-ww-cream text-3xl font-bold mb-4 border-l-4 border-ww-gold pl-4">조작 및 카메라 (Docent View)</h4>
+                                <p class="text-ww-lgray text-2xl leading-relaxed">
+                                    직관적인 1인칭(1FPS) 카메라 제어. 상호작용 키 입력 시 시점이 작품 전면의 지정 좌표로 부드럽게 고정되는 도슨트 뷰 기능 연출.
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <h4 class="text-ww-cream text-3xl font-bold mb-4 border-l-4 border-ww-gold pl-4">공간 음향 (Spatial Audio)</h4>
+                                <p class="text-ww-lgray text-2xl leading-relaxed">
+                                    3D Spatial Audio 기술 적용. 관람객의 이동 및 시선 좌표에 따라 각 윙(Wing)에 배치된 공식 테마 BGM의 볼륨과 입체감이 실시간으로 변동.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 06. 최적화 및 빌드 (디자인 개선) -->
+            <section class="bg-[#111111] border-t border-ww-dslate/30">
+                <h2 class="text-7xl font-bold mb-16 flex items-center gap-6">
+                    <span class="text-ww-gold font-orbitron text-7xl opacity-40">06</span> 기술적 최적화 및 빌드
+                </h2>
+                
+                <div class="grid grid-cols-2 gap-16 pr-32 h-[500px]">
+                    <!-- Optimization -->
+                    <div class="bg-ww-dslate/30 p-12 border border-ww-gold/30 relative overflow-hidden group hover:border-ww-gold transition-colors duration-300 flex flex-col justify-center">
+                        <i class="fa-solid fa-microchip absolute -right-10 -bottom-10 text-9xl text-ww-black/40 group-hover:scale-110 transition-transform duration-500" style="font-size: 20rem;"></i>
+                        <h3 class="text-4xl font-bold text-ww-gold mb-6 font-orbitron z-10">Optimization</h3>
+                        <p class="text-ww-cream text-xl mb-8 z-10">대규모 공간 렌더링 부하 제어를 위한 필수 작업</p>
+                        <ul class="text-ww-lgray text-xl space-y-5 relative z-10 font-medium">
+                            <li class="flex items-center"><i class="fa-solid fa-check text-ww-gold mr-4 text-2xl"></i> 카메라 시야 밖 매쉬 렌더링 제외: <strong class="text-white ml-2 tracking-wider">Occlusion Culling</strong></li>
+                            <li class="flex items-center"><i class="fa-solid fa-check text-ww-gold mr-4 text-2xl"></i> 드로우 콜(Draw Calls) 최소화: <strong class="text-white ml-2 tracking-wider">Static Batching</strong></li>
+                            <li class="flex items-center"><i class="fa-solid fa-lightbulb text-ww-gold mr-4 text-2xl"></i> 조명 연산 부하 완화: <strong class="text-white ml-2 tracking-wider">Baked & Real-time Light 복합 적용</strong></li>
+                        </ul>
+                    </div>
+
+                    <!-- Build Plan (폰트 및 레이아웃 최적화) -->
+                    <div class="bg-ww-dslate/30 p-12 border border-ww-gold/30 relative overflow-hidden group hover:border-ww-gold transition-colors duration-300 flex flex-col justify-center">
+                        <i class="fa-solid fa-globe absolute -right-10 -bottom-10 text-9xl text-ww-black/40 group-hover:scale-110 transition-transform duration-500" style="font-size: 20rem;"></i>
+                        <h3 class="text-4xl font-bold text-ww-gold mb-6 font-orbitron z-10">Build Plan</h3>
+                        <p class="text-ww-cream text-xl leading-relaxed relative z-10">
+                            대학 기말 과제 평가 환경을 고려해 접근성이 가장 뛰어난 포맷 채택.
+                        </p>
+                        <div class="mt-8 border-l-4 border-ww-gold pl-6 py-4 bg-ww-gold/10 relative z-10">
+                            <strong class="text-3xl text-white block tracking-wide">WebGL 플랫폼 빌드</strong>
+                            <span class="text-ww-lgray text-lg mt-2 block">별도의 클라이언트 설치 없이 웹 브라우저에서 즉시 실행</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- 로직 스크립트 -->
+    <script>
+        // 1920x1080 스케일링 로직
+        function resizeCanvas() {
+            const wrapper = document.getElementById('scale-wrapper');
+            const targetWidth = 1920;
+            const targetHeight = 1080;
+            
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            
+            // 창 크기에 맞게 1920x1080 비율 유지하며 스케일 조절
+            const scale = Math.min(windowWidth / targetWidth, windowHeight / targetHeight);
+            
+            wrapper.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 풀페이지 스크롤 로직 (총 6개 섹션)
+        const container = document.getElementById('scroll-container');
+        const dots = document.querySelectorAll('.nav-dot');
+        const totalSections = 6;
+        let currentSection = 0;
+        let isAnimating = false;
+
+        function updateSlider() {
+            container.style.transform = `translateY(-${currentSection * 1080}px)`;
+            
+            dots.forEach((dot, index) => {
+                if(index === currentSection) dot.classList.add('active');
+                else dot.classList.remove('active');
+            });
+            
+            setTimeout(() => {
+                isAnimating = false;
+            }, 800); 
+        }
+
+        function goToSlide(index) {
+            if (isAnimating || index === currentSection) return;
+            isAnimating = true;
+            currentSection = index;
+            updateSlider();
+        }
+
+        window.addEventListener('wheel', (e) => {
+            if (isAnimating) return;
+            
+            if (e.deltaY > 50) {
+                if (currentSection < totalSections - 1) {
+                    isAnimating = true;
+                    currentSection++;
+                    updateSlider();
+                }
+            } else if (e.deltaY < -50) {
+                if (currentSection > 0) {
+                    isAnimating = true;
+                    currentSection--;
+                    updateSlider();
+                }
+            }
+        });
+        
+        window.addEventListener('keydown', (e) => {
+            if (isAnimating) return;
+            if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+                if (currentSection < totalSections - 1) {
+                    isAnimating = true;
+                    currentSection++;
+                    updateSlider();
+                }
+            } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+                if (currentSection > 0) {
+                    isAnimating = true;
+                    currentSection--;
+                    updateSlider();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
